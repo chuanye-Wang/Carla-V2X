@@ -64,7 +64,8 @@ def cs_transform(x1, y1):
 
     x_tmp, y_tmp = x1 - ref_x, y1 - ref_y # 还原真实 UTM 坐标，之后还需转换成经纬度坐标
     # print(f"数据集的UTM: {x_tmp} {y_tmp}")
-    p1 = pyproj.Proj("+proj=utm +lat_0=0 +lon_0=117 +k=1 +x_0=500000 +y_0=0 +unit=m +type=crs", preserve_units=False) # 这一步定义了一个 UTM 投影坐标系对象，后面是一些精准度配置，无关紧要
+    # p1 = pyproj.Proj("+proj=utm +lat_0=0 +lon_0=117 +k=1 +x_0=500000 +y_0=0 +unit=m +type=crs", preserve_units=False) # 这一步定义了一个 UTM 投影坐标系对象，后面是一些精准度配置，无关紧要
+    p1 = pyproj.Proj("+proj=tmerc +lat_0=39.788261 +lon_0=116.534302", preserve_units=False)
     """
     下面这一部分是将真实轨迹的 UTM 值转换成真实经纬度
     """
@@ -73,8 +74,8 @@ def cs_transform(x1, y1):
     # print(f"数据集真实地理位置：{car_real_lon} {car_real_lat}")
 
     car_real_alt = 0 
-    origin_lat = 39.803799     # 这部分应该替换成xodr文件中的纬度（latitude）
-    origin_lon = 116.528549	# longitude经度，同上
+    origin_lat = 39.47177     # 这部分应该替换成xodr文件中的纬度（latitude）
+    origin_lon = 116.32035		# longitude经度，同上
     '''
     我的数据
     origin_lat = 39.788261 
@@ -102,9 +103,10 @@ def cs_transform(x1, y1):
     亦庄9号路口
     """
     
-    x2, y2, z2 = pm.geodetic2enu(car_real_lat, car_real_lon, car_real_alt, origin_lat, origin_lon, origin_alt)
-    
-    print(f"carla坐标系的 x= {x2/100000}km  y= {-y2/100000}km")
+    # x2, y2, z2 = pm.geodetic2enu(car_real_lat, car_real_lon, car_real_alt, origin_lat, origin_lon, origin_alt)
+    x2 = car_real_lat
+    y2 = car_real_lon
+    print(f"carla坐标系的 x= {x2/1000}km  y= {-y2/1000}km")
     
     return x2, -y2  #carla是左手坐标系，而我们常用的是右手坐标系，因此y2要取负
 
@@ -818,4 +820,3 @@ if __name__ == '__main__':
         pass
     finally:
         print('\ndone.')
-
