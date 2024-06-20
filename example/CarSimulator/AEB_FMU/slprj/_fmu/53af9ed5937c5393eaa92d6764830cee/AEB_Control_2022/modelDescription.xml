@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<fmiModelDescription fmiVersion="2.0" generationDateAndTime="2024-03-31T09:02:23Z" generationTool="Simulink (R2022b)" guid="{652f3bcb-8f83-eaef-a5df-7b4316257a65}" modelName="AEB_Control_2022" numberOfEventIndicators="0" variableNamingConvention="structured" version="2.2">
+  <CoSimulation canBeInstantiatedOnlyOncePerProcess="true" canHandleVariableCommunicationStepSize="false" canNotUseMemoryManagementFunctions="true" modelIdentifier="AEB_Control_2022"/>
+  <DefaultExperiment startTime="0" stepSize="0.01" stopTime="10"/>
+  <VendorAnnotations>
+    <Tool name="Simulink">
+      <Simulink>
+        <ImportCompatibility requireMATLABOnPath="no" requireRelease="all"/>
+        <SimulinkModelInterface>
+          <Inport blockPath="AEB_Control_2022/Carla_throttle" dataType="double" dimension="[1]" portName="Carla_throttle" portNumber="1" sampleTime="[0.01    0]" uniquePortName="Carla_throttle" unit=""/>
+          <Inport blockPath="AEB_Control_2022/Carla_Brake" dataType="double" dimension="[1]" portName="Carla_Brake" portNumber="2" sampleTime="[0.01    0]" uniquePortName="Carla_Brake" unit=""/>
+          <Inport blockPath="AEB_Control_2022/ego_diff" dataType="double" dimension="[1]" portName="ego_diff" portNumber="3" sampleTime="[0.01    0]" uniquePortName="ego_diff" unit=""/>
+          <Outport blockPath="AEB_Control_2022/Target_throttle" dataType="double" dimension="[1]" portName="Target_throttle" portNumber="1" sampleTime="[0.01    0]" uniquePortName="Target_throttle" unit=""/>
+          <Outport blockPath="AEB_Control_2022/Target_Brake" dataType="double" dimension="[1]" portName="Target_Brake" portNumber="2" sampleTime="[0.01    0]" uniquePortName="Target_Brake" unit=""/>
+          <Outport blockPath="AEB_Control_2022/Ego_TargetSpd" dataType="double" dimension="[1]" portName="Ego_TargetSpd" portNumber="3" sampleTime="[Inf   0]" uniquePortName="Ego_TargetSpd" unit=""/>
+        </SimulinkModelInterface>
+      </Simulink>
+    </Tool>
+  </VendorAnnotations>
+  <ModelVariables>
+    <ScalarVariable causality="input" description="Carla_throttle" name="Carla_throttle" valueReference="0" variability="continuous">
+      <Real start="0"/>
+      <!--Index = 1-->
+    </ScalarVariable>
+    <ScalarVariable causality="input" description="Carla_Brake" name="Carla_Brake" valueReference="1" variability="continuous">
+      <Real start="0"/>
+      <!--Index = 2-->
+    </ScalarVariable>
+    <ScalarVariable causality="input" description="ego_diff" name="ego_diff" valueReference="2" variability="continuous">
+      <Real start="0"/>
+      <!--Index = 3-->
+    </ScalarVariable>
+    <ScalarVariable causality="output" description="Target_throttle" initial="calculated" name="Target_throttle" valueReference="3" variability="continuous">
+      <Real/>
+      <!--Index = 4-->
+    </ScalarVariable>
+    <ScalarVariable causality="output" description="Target_Brake" initial="calculated" name="Target_Brake" valueReference="4" variability="continuous">
+      <Real/>
+      <!--Index = 5-->
+    </ScalarVariable>
+    <ScalarVariable causality="output" description="Ego_TargetSpd" initial="calculated" name="Ego_TargetSpd" valueReference="5" variability="continuous">
+      <Real/>
+      <!--Index = 6-->
+    </ScalarVariable>
+    <ScalarVariable causality="independent" description="time" name="time" valueReference="6" variability="continuous">
+      <Real/>
+      <!--Index = 7-->
+    </ScalarVariable>
+    <ScalarVariable causality="parameter" description="Distance_limit" initial="exact" name="Distance_limit" valueReference="7" variability="tunable">
+      <Real start="25"/>
+      <!--Index = 8-->
+    </ScalarVariable>
+    <ScalarVariable causality="parameter" description="Emgergence_Brake" initial="exact" name="Emgergence_Brake" valueReference="8" variability="tunable">
+      <Real start="0.5"/>
+      <!--Index = 9-->
+    </ScalarVariable>
+    <ScalarVariable causality="parameter" description="TargetSpeed_kph" initial="exact" name="TargetSpeed_kph" valueReference="9" variability="tunable">
+      <Real start="30"/>
+      <!--Index = 10-->
+    </ScalarVariable>
+    <ScalarVariable causality="parameter" description="Run_enable" initial="exact" name="Run_enable" valueReference="0" variability="tunable">
+      <Boolean start="0"/>
+      <!--Index = 11-->
+    </ScalarVariable>
+  </ModelVariables>
+  <ModelStructure>
+    <Outputs>
+      <Unknown index="4"/>
+      <Unknown index="5"/>
+      <Unknown index="6"/>
+    </Outputs>
+    <InitialUnknowns>
+      <Unknown index="4"/>
+      <Unknown index="5"/>
+      <Unknown index="6"/>
+    </InitialUnknowns>
+  </ModelStructure>
+</fmiModelDescription>
