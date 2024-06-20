@@ -338,80 +338,15 @@ def main():
         blueprintsVeh = [x for x in blueprintsVeh if int(x.get_attribute('number_of_wheels')) == 4]
         blueprintsVeh = [x for x in blueprintsVeh if x.has_attribute('role_name')]
         blueprintsBic = [x for x in blueprintsBic if x.has_attribute('role_name')]
-        '''
-        if args.safe:
-            blueprintsVeh = [x for x in blueprintsVeh if int(x.get_attribute('number_of_wheels')) == 4]
-            blueprintsVeh = [x for x in blueprintsVeh if not x.id.endswith('microlino')]
-            blueprintsVeh = [x for x in blueprintsVeh if not x.id.endswith('carlacola')]
-            blueprintsVeh = [x for x in blueprintsVeh if not x.id.endswith('cybertruck')]
-            blueprintsVeh = [x for x in blueprintsVeh if not x.id.endswith('t2')]
-            blueprintsVeh = [x for x in blueprintsVeh if not x.id.endswith('sprinter')]
-            blueprintsVeh = [x for x in blueprintsVeh if not x.id.endswith('firetruck')]
-            blueprintsVeh = [x for x in blueprintsVeh if not x.id.endswith('ambulance')]
-        '''
         blueprintsVeh = sorted(blueprintsVeh, key=lambda bp: bp.id)
 
         spawn_points = world.get_map().get_spawn_points()
         number_of_spawn_points = len(spawn_points)
-        # import pdb
-        # pdb.set_trace()
 
-        # if args.number_of_vehicles < number_of_spawn_points:
-        #     random.shuffle(spawn_points)
-        # elif args.number_of_vehicles > number_of_spawn_points:
-        #     msg = 'requested %d vehicles, but could only find %d spawn points'
-        #     logging.warning(msg, args.number_of_vehicles, number_of_spawn_points)
-        #     args.number_of_vehicles = number_of_spawn_points
-
-        # @todo cannot import these directly.
         SpawnActor = carla.command.SpawnActor
         SetAutopilot = carla.command.SetAutopilot
         SetVehicleLightState = carla.command.SetVehicleLightState
         FutureActor = carla.command.FutureActor
-        '''
-        # --------------
-        # Spawn ego vehicles
-        # --------------
-        batch = []
-        blueprint_ego = random.choice(blueprintsVeh)
-        if blueprint_ego.has_attribute('color'):
-            color = random.choice(blueprint_ego.get_attribute('color').recommended_values)
-            blueprint_ego.set_attribute('color', color)
-        if blueprint_ego.has_attribute('driver_id'):
-            blueprint_ego.set_attribute('driver_id', '0')
-        blueprint_ego.set_attribute('role_name', 'hero')
-
-        x1, y1 = df.loc[df.tag == 'AV'].x.values[0], df.loc[df.tag == 'AV'].y.values[0]
-        x2, y2 = cs_transform(x1, y1)
-        theta = df.loc[df.tag == 'AV'].theta.values[0]
-
-        # spawn the cars and set their autopilot and light state all together
-        location_ego = carla.Location(x=x2, y=y2, z=0.5)
-        print(location_ego)
-        rotation_ego = carla.Rotation(pitch=0.0, yaw=theta, roll=0.0)
-        transform_ego = carla.Transform(location_ego, rotation_ego)
-        '''
-        # light_state = vls.NONE
-        # if args.car_lights_on:
-        #     light_state = vls.Position | vls.LowBeam | vls.LowBeam
-        #transform_ego = world.get_map().get_spawn_points()[0]
-        #ego = SpawnActor(blueprint_ego, transform_ego).then(SetAutopilot(FutureActor, True, traffic_manager.get_port()))
-        #ego = SpawnActor(blueprint_ego, transform_ego).then(SetAutopilot(FutureActor, True, traffic_manager.get_port())).then(SetVehicleLightState(FutureActor, light_state))
-        #ego = world.spawn_actor(blueprint_ego, transform_ego)
-        #pdb.set_trace()
-        #ego = world.spawn_actor(blueprint_ego, random.choice(spawn_points))
-        # print(location_ego)
-        # print(transform_ego)
-        #ego.set_autopilot(True)
-        '''
-        batch.append(ego)
-        for response in client.apply_batch_sync(batch, synchronous_master):
-            response.actor_id
-            if response.error:
-                logging.error(response.error)
-            else:
-                vehicles_list.append(response.actor_id)
-        '''
         #pdb.set_trace()
         # --------------
         # Spawn vehicles
@@ -422,10 +357,7 @@ def main():
             break
             if n >= args.number_of_vehicles:
                 break
-            # if n >= 1:
-            #     break
-            # if n >= number_of_spawn_points:
-            #     break
+
             blueprint = random.choice(blueprintsVeh)
             if blueprint.has_attribute('color'):
                 color = random.choice(blueprint.get_attribute('color').recommended_values)
@@ -459,100 +391,12 @@ def main():
             batch.append(SpawnActor(blueprint, transform)
                 .then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
 
-
-            #transform = world.get_map().get_spawn_points()[n]
-
-            # sa = SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True, traffic_manager.get_port())).then(SetVehicleLightState(FutureActor, light_state))
-            # #sa.get_location()
-            # batch.append(sa)
-        '''
-        for response in client.apply_batch_sync(batch, synchronous_master):
-            response.actor_id
-            if response.error:
-                logging.error(response.error)
-            else:
-                vehicles_list.append(response.actor_id)
-        '''
         # -------------
         # Spawn pedestrians
         # -------------
         # some settings
         percentagePedestriansRunning = 0.0      # how many pedestrians will run
         percentagePedestriansCrossing = 1     # how many pedestrians will walk through the road
-        #percentagePedestriansCrossing = 0.0     # how many pedestrians will walk through the road
-        '''
-        # 1. take all the random locations to spawn
-        spawn_points = []
-        for i in range(args.number_of_pedestrians):
-            spawn_point = carla.Transform()
-            loc = world.get_random_location_from_navigation()
-            if (loc != None):
-                spawn_point.location = loc
-                spawn_points.append(spawn_point)
-        # 2. we spawn the walker object
-        batch = []
-        walker_speed = []
-        for spawn_point in spawn_points:
-            walker_bp = random.choice(blueprintsPed)
-            # set as not invincible
-            if walker_bp.has_attribute('is_invincible'):
-                walker_bp.set_attribute('is_invincible', 'false')
-            # set the max speed
-            if walker_bp.has_attribute('speed'):
-                if (random.random() > percentagePedestriansRunning):
-                    # walking
-                    walker_speed.append(walker_bp.get_attribute('speed').recommended_values[1])
-                else:
-                    # running
-                    walker_speed.append(walker_bp.get_attribute('speed').recommended_values[2])
-            else:
-                print("Walker has no speed")
-                walker_speed.append(0.0)
-            #batch.append(SpawnActor(walker_bp, spawn_point))
-        results = client.apply_batch_sync(batch, True)
-        walker_speed2 = []
-        for i in range(len(results)):
-            if results[i].error:
-                logging.error(results[i].error)
-            else:
-                pedestrians_list.append({"id": results[i].actor_id})
-                walker_speed2.append(walker_speed[i])
-        walker_speed = walker_speed2
-        # 3. we spawn the walker controller
-        batch = []
-        walker_controller_bp = world.get_blueprint_library().find('controller.ai.walker')
-        for i in range(len(pedestrians_list)):
-            batch.append(SpawnActor(walker_controller_bp, carla.Transform(), pedestrians_list[i]["id"]))
-        results = client.apply_batch_sync(batch, True)
-        for i in range(len(results)):
-            if results[i].error:
-                logging.error(results[i].error) 
-            else:
-                pedestrians_list[i]["con"] = results[i].actor_id
-        # 4. we put together the pedestrians and controllers id to get the objects from their id
-        for i in range(len(pedestrians_list)):
-            all_id.append(pedestrians_list[i]["con"])
-            all_id.append(pedestrians_list[i]["id"])
-        all_actors = world.get_actors(all_id)
-
-        # 5. initialize each controller and set target to walk to (list is [controler, actor, controller, actor ...])
-        # set how many pedestrians can cross the road
-        world.set_pedestrians_cross_factor(percentagePedestriansCrossing)
-        for i in range(0, len(all_id), 2):
-            # start walker
-            all_actors[i].start()
-            # set walk to random point
-            all_actors[i].go_to_location(world.get_random_location_from_navigation())
-            # max speed
-            all_actors[i].set_max_speed(float(walker_speed[int(i/2)]))
-
-        print('spawned %d vehicles and %d pedestrians, press Ctrl+C to exit.' % (len(vehicles_list), len(pedestrians_list)))
-        '''
-        # Example of how to use Traffic Manager parameters
-        #traffic_manager.global_percentage_speed_difference(30.0)
-
-        #pdb.set_trace()
-        #veh_ids = veh_ids[:1]
         wps_dict = {}
         for id in ids:
 
@@ -569,30 +413,12 @@ def main():
 
         pid_dict = {}
         controller_dict = {}
-        #has_destroy = []
-        '''
-        import pdb
-        pdb.set_trace()
-        '''
+
         for t in range(args.frames):
-            #world.wait_for_tick()
             print(f"t=_{t}")
-            # cur_frame = time_ls[frame]
-            # frame_df = 
-            '''
-            x_t, y_t = cs_transform(df.loc[df.tag == 'AV'].x.values[t], df.loc[df.tag == 'AV'].y.values[t])
-            theta_t = df.loc[df.tag == 'AV'].theta.values[t]
-            ego.set_location(carla.Location(x_t, y_t, ego.get_location().z))
-            #ego.set_rotation(carla.Location(0.0, theta_t, 0.0))
-            print(theta_t)
-            print(ego.get_transform().location)
-            '''
             actor_list = world.get_actors()
             
-            for id in veh_ids:
-                
-                # if id in has_destroy:
-                #     continue
+            for id in veh_ids:  
                 
                 if id in actor_spawn and actor_spawn[id] == t:
                     x_t, y_t = cs_transform(df.loc[df.id == id].x.values[0], df.loc[df.id == id].y.values[0])
@@ -625,9 +451,7 @@ def main():
                         if 'role_name' in actor.attributes and actor.attributes['role_name'] == str(id):
                             
                             carla.command.DestroyActor(actor) # 先屏蔽掉看看效果
-                            # actor_spawn.pop(id)
-                            # actor_destroy.pop(id)
-                            # has_destroy.append(id)
+
                             print(f"destroy_veh_{id}")
                             break
                 
@@ -636,29 +460,20 @@ def main():
                 actor_list = world.get_actors()
                 for actor in actor_list:
                     if 'role_name' in actor.attributes and actor.attributes['role_name'] == str(id):
-                        # import pdb
-                        # pdb.set_trace()
+                       
                         try:
-                            # x_t, y_t = cs_transform(df.loc[df.id == id].x.values[t - actor_spawn[id]], df.loc[df.id == id].y.values[t - actor_spawn[id]])
-                            # theta_t = math.degrees(df.loc[df.id == id].theta.values[t - actor_spawn[id]])
-                            #theta_t = df.loc[df.id == id].theta.values[t - actor_spawn[id]]
-                            #theta_t = df.loc[df.tag == 'AV'].theta.values[t]
-                            # location_t = carla.Location(x_t, y_t, actor.get_location().z)
-                            # rotation_t = carla.Rotation(pitch=0.0, yaw=theta_t, roll=0.0)
-                            #actor.set_transform(carla.Transform(location_t,rotation_t))
+                            
                             PID = pid_dict[id]
                             next_wp = wps_dict[id][t - actor_spawn[id]]
                             actor_dist = distance_vehicle(next_wp, actor.get_transform())
                             control = PID.run_step(target_speed, next_wp)
-                            #actor.apply_control(control)
+
                             if actor_dist > 10:
                                 actor.apply_control(control)
                                 print(f'move_veh_{id}')
                             break
-                            # actor.set_location(carla.Location(x_t, y_t, actor.get_location().z))
-                            # actor.set_rotation(carla.Rotation(pitch=0.0, yaw=theta_t, roll=0.0))
+
                         except:
-                            #raise Exception
                             print(f'move_error_veh_{id}')
                             continue
             
@@ -667,7 +482,6 @@ def main():
                     x_t, y_t = cs_transform(df.loc[df.id == id].x.values[0], df.loc[df.id == id].y.values[0])
                     location = carla.Location(x=x_t, y=y_t, z=0.5)
                     theta_t = math.degrees(df.loc[df.id == id].theta.values[0])
-                    #theta_t = df.loc[df.id == id].theta.values[0]
                     rotation = carla.Rotation(pitch=0.0, yaw=theta_t, roll=0.0)
                     transform = carla.Transform(location, rotation)
 
@@ -689,10 +503,7 @@ def main():
                 if id in actor_destroy and actor_destroy[id] == t:
                     for actor in actor_list:
                         if 'role_name' in actor.attributes and actor.attributes['role_name'] == str(id):
-                            # carla.command.DestroyActor(actor) # 先删掉看看效果
-                            # actor_spawn.pop(id)
-                            # actor_destroy.pop(id)
-                            # has_destroy.append(id)
+                            carla.command.DestroyActor(actor) # 先删掉看看效果
                             print(f"destroy_bic_{id} 修改了")
                             break
                 
@@ -701,16 +512,8 @@ def main():
                 actor_list = world.get_actors()
                 for actor in actor_list:
                     if 'role_name' in actor.attributes and actor.attributes['role_name'] == str(id):
-                        # import pdb
-                        # pdb.set_trace()
+    
                         try:
-                            # x_t, y_t = cs_transform(df.loc[df.id == id].x.values[t - actor_spawn[id]], df.loc[df.id == id].y.values[t - actor_spawn[id]])
-                            # theta_t = math.degrees(df.loc[df.id == id].theta.values[t - actor_spawn[id]])
-                            #theta_t = df.loc[df.id == id].theta.values[t - actor_spawn[id]]
-                            #theta_t = df.loc[df.tag == 'AV'].theta.values[t]
-                            # location_t = carla.Location(x_t, y_t, actor.get_location().z)
-                            # rotation_t = carla.Rotation(pitch=0.0, yaw=theta_t, roll=0.0)
-                            #actor.set_transform(carla.Transform(location_t,rotation_t))
                             PID = pid_dict[id]
                             next_wp = wps_dict[id][t - actor_spawn[id]]
                             actor_dist = distance_vehicle(next_wp, actor.get_transform())
@@ -720,77 +523,21 @@ def main():
                                 actor.apply_control(control)
                                 print(f'move_bic_{id}')
                             break
-                            # actor.set_location(carla.Location(x_t, y_t, actor.get_location().z))
-                            # actor.set_rotation(carla.Rotation(pitch=0.0, yaw=theta_t, roll=0.0))
+
                         except:
                             print(f'move_error_bic_{id}')
                             continue
             
-            
-            '''
-            for id in ped_ids:
-                if id in actor_spawn and actor_spawn[id] == t:
-                    x_t, y_t = cs_transform(df.loc[df.id == id].x.values[0], df.loc[df.id == id].y.values[0])
-                    location = carla.Location(x=x_t, y=y_t, z=0.5)
-                    theta_t = math.degrees(df.loc[df.id == id].theta.values[0])
-                    #theta_t = df.loc[df.id == id].theta.values[0]
-                    rotation = carla.Rotation(pitch=0.0, yaw=theta_t, roll=0.0)
-                    transform = carla.Transform(location, rotation)
-
-                    blueprint = random.choice(blueprintsPed)
-                    blueprint.set_attribute('role_name', str(id))
-                    try:
-                        actor = world.spawn_actor(blueprint, transform)
-                        walker_controller_bp = world.get_blueprint_library().find('controller.ai.walker')
-                        walker_controller_actor = world.spawn_actor(walker_controller_bp, carla.Transform(), actor)
-                        controller_dict[id] = walker_controller_actor
-                    except:
-                        #raise Exception
-                        continue
-                    print(f"generate_{id}")
-
-                if id in actor_destroy and actor_destroy[id] == t:
-                    for actor in actor_list:
-                        if 'role_name' in actor.attributes and actor.attributes['role_name'] == str(id):
-                            carla.command.DestroyActor(actor)
-                            actor_spawn.pop(id)
-                            actor_destroy.pop(id)
-                            print(f"destroy_{id}")
-                            break
-                
-                for actor in actor_list:
-                    if 'role_name' in actor.attributes and actor.attributes['role_name'] == str(id):
-                        # import pdb
-                        # pdb.set_trace()
-                        try:
-                            # import pdb
-                            # pdb.set_trace()
-                            next_wp = wps_dict[id][t - actor_spawn[id]]
-                            #actor_dist = distance_vehicle(next_wp, actor.get_transform())
-                            controller_t = controller_dict[id]
-                            controller_t.start()
-                            walker_loc = next_wp.transform.location
-                            #walker_loc_ = world.get_random_location_from_navigation()
-                            controller_t.go_to_location(walker_loc)
-                            controller_t.set_max_speed(1.4)
-                            print(f'move_{id}')
-                            break
-                            # actor.set_location(carla.Location(x_t, y_t, actor.get_location().z))
-                            # actor.set_rotation(carla.Rotation(pitch=0.0, yaw=theta_t, roll=0.0))
-                        except:
-                            print(f'move_error_{id}')
-                            continue
-            '''
             world.tick()
             if t == 99:
                 
                 for k in ids:
                     for actor in actor_list:
                         if 'role_name' in actor.attributes and actor.attributes['role_name'] == str(k):
-                            # carla.command.DestroyActor(actor) # 先注释掉看看
+                            carla.command.DestroyActor(actor) # 先注释掉看看
                             print(f"final_destroy_{k},修改过")
                             break
-        #ego.destroy()
+
     finally:
         
         if not args.asynch and synchronous_master:
