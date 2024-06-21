@@ -1,7 +1,7 @@
 # 解决两个问题：
 #   1. 采用多线程做数据转换
 #   2. 用缓冲器装饰 cs_transform 函数进一步减少计算时间，因为它会将 cs_transform函数 所有输入输出缓存，这样遇到同样的输入就不会重复计算
-#   3. 重新精简代码，之前佳儒师兄缝合的代码看起来实在有点费劲
+#   3. 重新精简代码
 import numpy as np
 import pandas as pd
 import sys,os
@@ -81,6 +81,42 @@ def df_interpolate(df):
     return interp_df
 
 
+def get_actor_blueprints(world, filter, generation):
+    """
+    @brief 获取符合特定过滤条件和生成代的actor蓝图
+    
+    @param world CARLA仿真世界对象
+    @param filter 用于过滤蓝图的字符串
+    @param generation 生成代
+
+    @return 符合过滤条件和生成代的actor蓝图列表
+    """
+
+    bps = world.get_blueprint_library().filter(filter)
+
+    if generation.lower() == "all":
+        return bps
+
+    # If the filter returns only one bp, we assume that this one needed
+    # and therefore, we ignore the generation
+    if len(bps) == 1:
+        return bps
+
+    try:
+        int_generation = int(generation)
+        # Check if generation is in available generations
+        if int_generation in [1, 2]:
+            bps = [x for x in bps if int(x.get_attribute('generation')) == int_generation]
+            return bps
+        else:
+            print("   Warning! Actor Generation is not valid. No actor will be spawned.")
+            return []
+    except:
+        print("   Warning! Actor Generation is not valid. No actor will be spawned.")
+        return []
+
+
+
 def main():
     path2dataset_file = "10039.csv"
     # print(f'dataset path: {path2dataset_file}')
@@ -124,24 +160,24 @@ def main():
         print(f'初始化超时：{T_o}')
     
 
-    # # 世界配置
-    # try:
-    #     world = client.get_world()
-    #     settings = world.get_settings()
-    #     settings.max_substep_delta_time = 0.01 # 设置最大子步的步长
-    #     settings.max_substeps  = 10 # 最大子步数，将每一时间步长分解为最多10个子步，具体分解为多少个子步由UE4计算情况动态决定
+    # 世界配置
+    try:
+        world = client.get_world()
+        settings = world.get_settings()
+        settings.max_substep_delta_time = 0.01 # 设置最大子步的步长
+        settings.max_substeps  = 10 # 最大子步数，将每一时间步长分解为最多10个子步，具体分解为多少个子步由UE4计算情况动态决定
         
-    #     # settings.synchronous_mode = True 启用同步模式后，所有客户端都需要遵循同步规则
-    #     # synchronous_master = True 确定了此客户端脚本负责发送同步步长推进命令，驱动整个仿真环境前进
-    #     synchronous_master = True
-    #     settings.synchronous_mode = True 
+        # settings.synchronous_mode = True 启用同步模式后，所有客户端都需要遵循同步规则
+        # synchronous_master = True 确定了此客户端脚本负责发送同步步长推进命令，驱动整个仿真环境前进
+        synchronous_master = True
+        settings.synchronous_mode = True 
 
-    #     # 因为数据集是10Hz的
-    #     settings.fixed_delta_seconds = 0.1
-    #     world.apply_settings(settings) # 使配置生效
+        # 因为数据集是10Hz的
+        settings.fixed_delta_seconds = 0.1
+        world.apply_settings(settings) # 使配置生效
 
-    # except Exception as e:
-    #     raise RuntimeError('世界信息异常，要么是client.get_world()失败，要么是后续仿真器世界配置出错')
+    except Exception as e:
+        raise RuntimeError('世界信息异常，要么是client.get_world()失败，要么是后续仿真器世界配置出错')
     
 
     '''
@@ -149,29 +185,48 @@ def main():
     键值为：id、
     数值为：路径点对象组成的数列
     '''
-    totol_frame = 100    # 其实是101帧，包含首尾帧，但在for里算到100正好合适
-    wps_dic = {} # 路径点字典，键值为：id、数值为路径点数列。
-
-    for this_specific_id in all_ids_that_we_have:
-         # 将插值处理过后的原始数据集中的所有 “此循环时的id” 的数据打包出来成为一个单独的（暂时的）数据结构
-        all_data_of_this_id = processed_data.loc[processed_data.id == this_specific_id]
-
-        wps = [] # 路径点数列
-
-        # if(actor_spawn_time[this_specific_id] == this_frame):
-        # 把这个id的数据集转换之后存在 wps 数列当中
-        for this_frame in range(len(all_data_of_this_id)): 
-            x_, y_ = cs_transform(all_data_of_this_id.x.values[this_frame], all_data_of_this_id.y.values[this_frame])
-
-            location = carla.Location(x=x_, y=y_, z=0.1)
-            rotation = carla.Rotation(pitch=0.0, yaw=0.0, roll=0.0)
-            transform = carla.Transform(location, rotation)
-
-            wps.append(transform.location)
-
-        wps_dic[this_specific_id] = wps
-
     
+    # wps_dic = {} # 路径点字典，键值为：id、数值为路径点数列。
+
+    # for this_specific_id in all_ids_that_we_have:
+    #      # 将插值处理过后的原始数据集中的所有 “此循环时的id” 的数据打包出来成为一个单独的（暂时的）数据结构
+    #     all_data_of_this_id = processed_data.loc[processed_data.id == this_specific_id]
+
+    #     wps = [] # 路径点数列
+
+    #     # if(actor_spawn_time[this_specific_id] == this_frame):
+    #     # 把这个id的数据集转换之后存在 wps 数列当中
+    #     for this_frame in range(len(all_data_of_this_id)): 
+    #         x_, y_ = cs_transform(all_data_of_this_id.x.values[this_frame], all_data_of_this_id.y.values[this_frame])
+
+    #         location = carla.Location(x=x_, y=y_, z=0.1)
+    #         rotation = carla.Rotation(pitch=0.0, yaw=0.0, roll=0.0)
+    #         transform = carla.Transform(location, rotation)
+
+    #         wps.append(transform.location)
+
+    #     wps_dic[this_specific_id] = wps
+
+    blueprintsVeh = get_actor_blueprints(world, args.filterv, args.generationv) # 后面这两个参数还得修改
+    blueprintsBic = get_actor_blueprints(world, args.filterb, args.generationb) # 后面这两个参数还得修改
+    blueprintsPed = get_actor_blueprints(world, args.filterw, args.generationw) # 后面这两个参数还得修改
+
+    blueprintsVeh = [x for x in blueprintsVeh if int(x.get_attribute('number_of_wheels')) == 4]
+    blueprintsVeh = [x for x in blueprintsVeh if x.has_attribute('role_name')]
+    blueprintsBic = [x for x in blueprintsBic if x.has_attribute('role_name')]
+    blueprintsVeh = sorted(blueprintsVeh, key=lambda bp: bp.id) # 对蓝图id进行排序，实验的时候控制变量作用，前后对比方便
+    '''
+    蓝图处理
+    接下来是生成actor的函数
+    world_tik
+    然后是销毁的actor的函数
+    '''
+
+    totol_frame = 100
+    # for t in range(totol_frame):
+
+
+
 
     
 

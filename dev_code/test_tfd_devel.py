@@ -436,9 +436,9 @@ def main():
                 rotation = carla.Rotation(pitch=0.0, yaw=0.0, roll=0.0)
                 transform = carla.Transform(location, rotation)
 
-                wps.append(world.get_map().get_waypoint(transform.location)) # 这个get_waypoint不应该调用，
+                wps.append(world.get_map().get_waypoint(transform.location)) # 这个get_waypoint也许不应该调用，
                 # 因为这个函数是根据我数据点的位置，找离它最近的道路中心线上的way_point,这样做就有悖于我们想要
-                # 做真实车辆数据集再现的目的了
+                # 做真实车辆数据集再现的目的了。不过这个仅仅是当前的理解
             wps_dict[id] = wps
 
         pid_dict = {}
@@ -448,9 +448,10 @@ def main():
             print(f"t=_{t}")
             actor_list = world.get_actors()
             
-            for id in veh_ids:  
+            for id in veh_ids:
                 
                 if id in actor_spawn and actor_spawn[id] == t:
+                    # 算出初始位置，其实这个在上一步已经做完了，所以这一步可以不做，直接从wps_dir中取第0个就可以
                     x_t, y_t = cs_transform(df.loc[df.id == id].x.values[0], df.loc[df.id == id].y.values[0])
                     location = carla.Location(x=x_t, y=y_t, z=0.01)  # 生成车辆x，y，z
                     theta_t = math.degrees(df.loc[df.id == id].theta.values[0])
