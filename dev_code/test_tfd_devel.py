@@ -353,43 +353,58 @@ def main():
         # --------------
         hero = args.hero
         #for n, transform in enumerate(spawn_points):
-        for n in range(len(veh_ids)):
-            break
-            if n >= args.number_of_vehicles:
-                break
+        '''
+        tfd_dir = '/home/ubuntu/WCY/carla-dev/tfd/test9/10038.csv'  # 找到数据集
+        raw_df = pd.read_csv(tfd_dir) # 用 panda 读取数据集，pd的数据结构
+        df = df_interpolate(raw_df)
+        scene_t_min, scene_t_max = min(df.timestamp), max(df.timestamp)
 
-            blueprint = random.choice(blueprintsVeh)
-            if blueprint.has_attribute('color'):
-                color = random.choice(blueprint.get_attribute('color').recommended_values)
-                blueprint.set_attribute('color', color)
-            if blueprint.has_attribute('driver_id'):
-                driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
-                blueprint.set_attribute('driver_id', driver_id)
-            if hero:
-                blueprint.set_attribute('role_name', 'hero')
-                hero = False
-            else:
-                blueprint.set_attribute('role_name', 'autopilot')
+        veh_ids = df.loc[df.type == 'VEHICLE'].id.unique()
+        bic_ids = df.loc[df.type == 'BICYCLE'].id.unique()
+        ped_ids = df.loc[df.type == 'PEDESTRIAN'].id.unique()
+        
+        '''
+        '''
+        下面这段代码根本没用上，因为for循环进去就break了，因此为了方便读代码直接注释掉了
+        
+        '''
+        # for n in range(len(veh_ids)):  # 对于每一个数据集中标记为vehicle的id个数，也就是汽车的数量
+        #     break
+        #     if n >= args.number_of_vehicles:
+        #         break
 
-            # prepare the light state of the cars to spawn
-            light_state = vls.NONE
-            if args.car_lights_on:
-                light_state = vls.Position | vls.LowBeam | vls.LowBeam
+        #     blueprint = random.choice(blueprintsVeh)
+        #     if blueprint.has_attribute('color'):
+        #         color = random.choice(blueprint.get_attribute('color').recommended_values)
+        #         blueprint.set_attribute('color', color)
+        #     if blueprint.has_attribute('driver_id'):
+        #         driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
+        #         blueprint.set_attribute('driver_id', driver_id)
+        #     if hero:
+        #         blueprint.set_attribute('role_name', 'hero')
+        #         hero = False
+        #     else:
+        #         blueprint.set_attribute('role_name', 'autopilot')
 
-            # spawn the cars and set their autopilot and light state all together
+        #     # prepare the light state of the cars to spawn
+        #     light_state = vls.NONE
+        #     if args.car_lights_on:
+        #         light_state = vls.Position | vls.LowBeam | vls.LowBeam
 
-            x1, y1 = df.loc[df.id == veh_ids[n]].x.values[0], df.loc[df.id == veh_ids[n]].y.values[0]
-            #x1, y1 = 416766, 4732399
-            x2, y2 = cs_transform(x1, y1)
+        #     # spawn the cars and set their autopilot and light state all together
+
+        #     x1, y1 = df.loc[df.id == veh_ids[n]].x.values[0], df.loc[df.id == veh_ids[n]].y.values[0]
+        #     #x1, y1 = 416766, 4732399
+        #     x2, y2 = cs_transform(x1, y1)
 	    
-            # spawn the cars and set their autopilot and light state all together
-            location = carla.Location(x=x2, y=y2, z=2.0)
-            #location_ego = carla.Location(x=0.0,y=0.0,z=0.0)
-            rotation = carla.Rotation(pitch=0.0, yaw=0.0, roll=0.0)
-            transform = carla.Transform(location, rotation)
+        #     # spawn the cars and set their autopilot and light state all together
+        #     location = carla.Location(x=x2, y=y2, z=2.0)
+        #     #location_ego = carla.Location(x=0.0,y=0.0,z=0.0)
+        #     rotation = carla.Rotation(pitch=0.0, yaw=0.0, roll=0.0)
+        #     transform = carla.Transform(location, rotation)
 
-            batch.append(SpawnActor(blueprint, transform)
-                .then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
+        #     batch.append(SpawnActor(blueprint, transform)
+        #         .then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
 
         # -------------
         # Spawn pedestrians
@@ -398,23 +413,38 @@ def main():
         percentagePedestriansRunning = 0.0      # how many pedestrians will run
         percentagePedestriansCrossing = 1     # how many pedestrians will walk through the road
         wps_dict = {}
-        for id in ids:
 
-            df_id = df.loc[df.id == id]
+        '''
+
+        ids = df.id.unique()
+        actor_spawn = {}
+        actor_destroy = {}
+        for i in ids:
+            df_id = df.loc[df.id == i]
+            t_min, t_max = min(df_id.timestamp), max(df_id.timestamp)
+            actor_spawn[i], actor_destroy[i] = int(10 * (t_min - scene_t_min)), int(10 * (t_max - scene_t_min))
+
+        '''
+        for id in ids: # 所有id，包括vehicle、bicycle、pedestrains的id
+
+            df_id = df.loc[df.id == id] # 把同一个id的所有数据提取到同一个dataframe中
             
             wps = []
-            for t in range(len(df_id)):
+            for t in range(len(df_id)): # 循环一个id的所有数据点数量的次数
                 x_, y_ = cs_transform(df_id.x.values[t], df_id.y.values[t])
                 location = carla.Location(x=x_, y=y_, z=0.5)
                 rotation = carla.Rotation(pitch=0.0, yaw=0.0, roll=0.0)
                 transform = carla.Transform(location, rotation)
-                wps.append(world.get_map().get_waypoint(transform.location))
+
+                wps.append(world.get_map().get_waypoint(transform.location)) # 这个get_waypoint不应该调用，
+                # 因为这个函数是根据我数据点的位置，找离它最近的道路中心线上的way_point,这样做就有悖于我们想要
+                # 做真实车辆数据集再现的目的了
             wps_dict[id] = wps
 
         pid_dict = {}
         controller_dict = {}
 
-        for t in range(args.frames):
+        for t in range(args.frames): # args.frames = 100    100帧因为10秒，10Hz
             print(f"t=_{t}")
             actor_list = world.get_actors()
             

@@ -81,8 +81,6 @@ def df_interpolate(df):
     return interp_df
 
 
-
-
 def main():
     path2dataset_file = "10039.csv"
     # print(f'dataset path: {path2dataset_file}')
@@ -93,7 +91,7 @@ def main():
 
     processed_data = df_interpolate(raw_data) # 数据预处理，补齐缺失帧
 
-    all_ids_that_we_have = processed_data.id.unique()
+    all_ids_that_we_have = processed_data.id.unique() # 也就是之前的ids
     # print(all_ids_that_we_have)
     whole_scenario_stamp_min, whole_scenario_stamp_max = min(processed_data.timestamp), max(processed_data.timestamp)
     # print(whole_scenario_stamp_min,whole_scenario_stamp_max) # 1657100477.8  1657100487.7   看起来是10秒的数据
@@ -114,6 +112,8 @@ def main():
     # print(actor_spawn_time[2473222]) # 9.5
     # print(actor_destroy_time[2473222]) # 9.900000095367432
 
+
+    # 初始化端口
     try:
         print("初始化Client端口")
         client = carla.Client('127.0.0.1',2000)
@@ -123,21 +123,66 @@ def main():
     except carla.TimeoutError as T_o:
         print(f'初始化超时：{T_o}')
     
-    try:
-        world = client.get_world()
-        settings = world.get_settings()
-        '''
-        这里继续添加仿真世界配置代码
 
-        首先是设置同步模式
-        2024.6.20  20：45  王川页
-        '''
+    # # 世界配置
+    # try:
+    #     world = client.get_world()
+    #     settings = world.get_settings()
+    #     settings.max_substep_delta_time = 0.01 # 设置最大子步的步长
+    #     settings.max_substeps  = 10 # 最大子步数，将每一时间步长分解为最多10个子步，具体分解为多少个子步由UE4计算情况动态决定
+        
+    #     # settings.synchronous_mode = True 启用同步模式后，所有客户端都需要遵循同步规则
+    #     # synchronous_master = True 确定了此客户端脚本负责发送同步步长推进命令，驱动整个仿真环境前进
+    #     synchronous_master = True
+    #     settings.synchronous_mode = True 
 
+    #     # 因为数据集是10Hz的
+    #     settings.fixed_delta_seconds = 0.1
+    #     world.apply_settings(settings) # 使配置生效
 
-
-    except Exception as e:
-        raise RuntimeError('世界信息异常，要么是client.get_world()失败，要么是后续仿真器世界配置出错')
+    # except Exception as e:
+    #     raise RuntimeError('世界信息异常，要么是client.get_world()失败，要么是后续仿真器世界配置出错')
     
+
+    '''
+    这部分将所有id的路径点存储在wps_dic字典当中，
+    键值为：id、
+    数值为：路径点对象组成的数列
+    '''
+    totol_frame = 100    # 其实是101帧，包含首尾帧，但在for里算到100正好合适
+    wps_dic = {} # 路径点字典，键值为：id、数值为路径点数列。
+
+    for this_specific_id in all_ids_that_we_have:
+         # 将插值处理过后的原始数据集中的所有 “此循环时的id” 的数据打包出来成为一个单独的（暂时的）数据结构
+        all_data_of_this_id = processed_data.loc[processed_data.id == this_specific_id]
+
+        wps = [] # 路径点数列
+
+        # if(actor_spawn_time[this_specific_id] == this_frame):
+        # 把这个id的数据集转换之后存在 wps 数列当中
+        for this_frame in range(len(all_data_of_this_id)): 
+            x_, y_ = cs_transform(all_data_of_this_id.x.values[this_frame], all_data_of_this_id.y.values[this_frame])
+
+            location = carla.Location(x=x_, y=y_, z=0.1)
+            rotation = carla.Rotation(pitch=0.0, yaw=0.0, roll=0.0)
+            transform = carla.Transform(location, rotation)
+
+            wps.append(transform.location)
+
+        wps_dic[this_specific_id] = wps
+
+    
+
+    
+
+    
+
+    
+                
+                
+
+
+
 
 
 
