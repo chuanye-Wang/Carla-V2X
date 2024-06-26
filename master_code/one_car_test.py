@@ -13,7 +13,9 @@ import carla
 import pymap3d as pm
 import math
 import random
-from agents.navigation.controller import VehiclePIDController
+from agents.tools.misc import draw_waypoints
+import time
+# from agents.navigation.controller import VehiclePIDController
 
 
 
@@ -47,17 +49,18 @@ def cs_transform(x1, y1):
     p1 = pyproj.Proj("+proj=utm +lat_0=0 +lon_0=117 +k=1 +x_0=500000 +y_0=0 +unit=m +type=crs", preserve_units=False)
 
     # 将真实轨迹的UTM值转换成真实的经纬度
-    car_real_lon, car_real_lat, car_real_alt= p1(x_tmp, y_tmp, inverse=True), 0
+    car_real_lon, car_real_lat = p1(x_tmp, y_tmp, inverse=True)
+    car_real_alt = 0
 
     # 这部分应该用carla世界中原点的真实经纬度代替
-    origin_lon = 116.729
-    origin_lat = 39.8664
+    origin_lon = 116.528549
+    origin_lat = 39.803799
     origin_alt = 0
     # 转换后的坐标
     x_rst, y_rst, z_rst = pm.geodetic2enu(car_real_lat, car_real_lon, car_real_alt, origin_lat, origin_lon, origin_alt)
     y_rst = -y_rst
-    print(f'{x_rst}  {y_rst}')
 
+    # print(f'{x_rst/1000}      {y_rst/1000}')
     return x_rst, y_rst
 
 
@@ -94,39 +97,8 @@ def df_interpolate(df):
     return interp_df
 
 
-def get_actor_blueprints(world, filter, generation):
-    """
-    @brief 获取符合特定过滤条件和生成代的actor蓝图
-    
-    @param world CARLA仿真世界对象
-    @param filter 用于过滤蓝图的字符串
-    @param generation 生成代
 
-    @return 符合过滤条件和生成代的actor蓝图列表
-    """
 
-    bps = world.get_blueprint_library().filter(filter)
-
-    if generation.lower() == "all":
-        return bps
-
-    # If the filter returns only one bp, we assume that this one needed
-    # and therefore, we ignore the generation
-    if len(bps) == 1:
-        return bps
-
-    try:
-        int_generation = int(generation)
-        # Check if generation is in available generations
-        if int_generation in [1, 2]:
-            bps = [x for x in bps if int(x.get_attribute('generation')) == int_generation]
-            return bps
-        else:
-            print("   Warning! Actor Generation is not valid. No actor will be spawned.")
-            return []
-    except:
-        print("   Warning! Actor Generation is not valid. No actor will be spawned.")
-        return []
 
 
 
@@ -138,10 +110,37 @@ def main():
     raw_data = raw_data[colums_we_want] # 这才是我们确切需要的，不带任何冗余的数据
     # print(raw_data)
 
-    processed_data = df_interpolate(raw_data) # 数据预处理，补齐缺失帧
+    ##########################################################################
+    # 这一部分代码可以将某一个id的数据单独提取出来，这部分代码用于调试，最后注释掉即可
+    #
+    some_x = 419518.201555984  # 长弯道的，也是我最倾向于选择的轨迹，只是轨迹点不连续
+    # some_x = 419529.565373655  # 长弯道的
+    # some_x = 419521.63902373   # 直线的
+    # some_x = 419543.576778995  # 短弯道的，第一个数据点就是
+    # some_x = 419546.032637883  # 短弯道的
 
+
+
+    found = raw_data[raw_data['x'] == some_x]
+    print(f'找到符合的一行：\n{found}\n')
+
+    found_id = int(found['id'].values)
+    print(f'现在找到该轨迹点属于id为 {found_id} 的对象:\n')
+    raw_data = raw_data[raw_data['id'] == found_id]
+    print(f'现在将id为 {found_id} 的所有数据提取出来：')
+    print(raw_data,'\n')
+    ###########################################################################
+
+
+
+    print('数据预处理中：')
+    processed_data = df_interpolate(raw_data) # 数据预处理，补齐缺失帧
+    # processed_data = raw_data # 看看不经过平滑处理的数据什么样子
+    # print(processed_data)
+    
     all_ids_that_we_have = processed_data.id.unique() # 也就是之前的ids
     # print(all_ids_that_we_have)
+
     whole_scenario_stamp_min, whole_scenario_stamp_max = min(processed_data.timestamp), max(processed_data.timestamp)
     # print(whole_scenario_stamp_min,whole_scenario_stamp_max) # 1657100477.8  1657100487.7   看起来是10秒的数据
 
@@ -157,9 +156,10 @@ def main():
         actor_spawn_time[each_id], actor_destroy_time[each_id] = t_min - whole_scenario_stamp_min, \
             t_max - whole_scenario_stamp_min
     
-    # 随便选了一个id试验了一下，可以的
-    # print(actor_spawn_time[2473222]) # 9.5
-    # print(actor_destroy_time[2473222]) # 9.900000095367432
+    print('数据预处理完毕！\n')
+
+    print(f'演员-{found_id}生成时间：{actor_spawn_time[found_id]}')
+    print(f'演员-{found_id}生成时间：{actor_destroy_time[found_id]}\n')
 
 
     # 初始化端口
@@ -177,16 +177,28 @@ def main():
     try:
         world = client.get_world()
         settings = world.get_settings()
-        settings.max_substep_delta_time = 0.01 # 设置最大子步的步长
-        settings.max_substeps  = 10 # 最大子步数，将每一时间步长分解为最多10个子步，具体分解为多少个子步由UE4计算情况动态决定
         
-        # settings.synchronous_mode = True 启用同步模式后，所有客户端都需要遵循同步规则
-        # synchronous_master = True 确定了此客户端脚本负责发送同步步长推进命令，驱动整个仿真环境前进
-        synchronous_master = True
-        settings.synchronous_mode = True 
+        ################################################################
+        # 这部分是同步模式的设置
+        #   真正仿真的时候用这一套设置！
+        #
+        # settings.max_substep_delta_time = 0.01 # 设置最大子步的步长
+        # settings.max_substeps  = 10 # 最大子步数，将每一时间步长分解为最多10个子步，具体分解为多少个子步由UE4计算情况动态决定
+        # synchronous_master = True
+        # settings.synchronous_mode = True 
+        # # 因为数据集是10Hz的
+        # settings.fixed_delta_seconds = 0.1
+        ################################################################
 
-        # 因为数据集是10Hz的
-        settings.fixed_delta_seconds = 0.1
+        ################################################################
+        # 这一步是一步模式的设置
+        # 两种模式的setting不能同时生效
+        # 调试的时候用着一套设置，否则没有写word.tick会导致仿真时间飞快
+        # 
+        settings.synchronous_mode = False
+        settings.fixed_delta_seconds = None  # 确保不使用固定时间步长
+        ################################################################
+        
         world.apply_settings(settings) # 使配置生效
 
     except Exception as e:
@@ -202,21 +214,24 @@ def main():
     wps_dic = {} # 路径点字典，键值为：id、数值为路径点数列。
 
     for this_specific_id in all_ids_that_we_have:
+        print(f'目前在处理的id是：{this_specific_id}')
          # 将插值处理过后的原始数据集中的所有 “此循环时的id” 的数据打包出来成为一个单独的（暂时的）数据结构
         all_data_of_this_id = processed_data.loc[processed_data.id == this_specific_id]
-
+        # print(all_data_of_this_id)
         wps = [] # 路径点数列
 
         # if(actor_spawn_time[this_specific_id] == this_frame):
         # 把这个id的数据集转换之后存在 wps 数列当中
         for this_frame in range(len(all_data_of_this_id)): 
+            
             x_, y_ = cs_transform(all_data_of_this_id.x.values[this_frame], all_data_of_this_id.y.values[this_frame])
 
             location = carla.Location(x=x_, y=y_, z=0.1)
-            rotation = carla.Rotation(pitch=0.0, yaw=0.0, roll=0.0)
+            rotation = carla.Rotation(pitch=0.0, yaw=all_data_of_this_id.theta.values[this_frame], roll=0.0)
             transform = carla.Transform(location, rotation)
-
-            wps.append(world.get_map().get_waypoint(transform.location))
+            # print(f'打印transform看看是什么类型的：{transform}')
+            # wps.append(world.get_map().get_waypoint(transform.location))
+            wps.append(transform)
 
         wps_dic[this_specific_id] = wps
 
@@ -224,9 +239,25 @@ def main():
     '''
     上一步已经获得了所有这个id对应的轨迹点，接下来debug打印出来看看对不对
     '''
+    try:
+        road_way_points = world.get_map().generate_waypoints(distance=1.0)
+        for thispoint in road_way_points:
+            world.debug.draw_point(thispoint.transform.location,size=0.2,color=carla.Color(g=255),life_time=60)
 
 
-    print(wps_dic)
+        
+
+        draw_waypoints(world, wps_dic[found_id].location)
+
+    except Exception as e:
+        print(f'在画waypoint时出错：{e}')
+
+    
+    blueprint_library = world.get_blueprint_library()
+    cybertruck_bp = blueprint_library.find('vehicle.tesla.cybertruck')
+    
+
+    # ego_car = world.spawn_actor(cybertruck_bp, wps_dic[found_id][0].transform)
 
     # blueprintsVeh = get_actor_blueprints(world, 'vehicle.*', 'All')
     # blueprintsBic = get_actor_blueprints(world, 'vehicle.harley-davidson.low_rider', 'All')
@@ -288,7 +319,13 @@ def main():
     #             except:
     #                 #raise Exception
     #                 pass
-                    
+    
+
+
+
+
+
+    # ego_car.destroy()
 
 
 
