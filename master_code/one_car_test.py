@@ -70,8 +70,8 @@ def cs_transform(x1, y1):
 
     # 这部分应该用carla世界中原点的真实经纬度代替
     # intersection 地图原点######
-    # origin_lon = 116.528549
-    # origin_lat = 39.803799
+    origin_lon = 116.528549
+    origin_lat = 39.803799
     ############################
 
     # <proj value="+proj=tmerc +lat_0=39.802021 +lon_0=116.526939"/>
@@ -88,10 +88,15 @@ def cs_transform(x1, y1):
 
     # <proj value="+proj=tmerc +lat_0=39.803242 +lon_0=116.527908"/>
     # one_car_9_2 地图的原点#######
-    origin_lon = 116.527908
-    origin_lat = 39.803242
+    # origin_lon = 116.527908
+    # origin_lat = 39.803242
     #############################
 
+    # <proj value="+proj=tmerc +lat_0=39.802101 +lon_0=116.526299"/>
+    # one_car_9_4 地图原点#########
+    # origin_lon = 116.526299
+    # origin_lat = 39.802101
+    #############################
 
     origin_alt = 0
     # 转换后的坐标
@@ -262,7 +267,7 @@ def main():
                 
                 x_, y_ = cs_transform(all_data_of_this_id.x.values[this_frame], all_data_of_this_id.y.values[this_frame])
 
-                location = carla.Location(x=x_, y=y_, z=0.5)
+                location = carla.Location(x=x_, y=y_, z=0.2)
                 rotation = carla.Rotation(pitch=0.0, yaw=all_data_of_this_id.theta.values[this_frame], roll=0.0)
                 # rotation = carla.Rotation(pitch=0.0, yaw=all_data_of_this_id.theta.values[this_frame]-90, roll=0.0) # 不对
                 transform = carla.Transform(location, rotation)
