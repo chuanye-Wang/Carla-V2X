@@ -18,7 +18,6 @@ import time
 from agents.navigation.controller import VehiclePIDController
 
 
-
 class CustomWaypoint:
     """
     @brief 为了适配PythonAPI，包装了一下
@@ -138,8 +137,6 @@ def df_interpolate(df):
         interp_df = interp_df.append(df_id_veh, ignore_index=True)
 
     return interp_df
-
-
 
 
 def main():
@@ -283,7 +280,6 @@ def main():
         
         # print(f'看看路径点字典中是什么格式的：{wps_dic}')
 
-
         '''
         上一步已经获得了所有这个id对应的轨迹点，接下来debug打印出来看看对不对
         '''
@@ -334,105 +330,6 @@ def main():
 
     finally:
         ego_car.destroy()
-        
-                 
-        # world.wait_for_tick()
-        # blueprintsVeh = get_actor_blueprints(world, 'vehicle.*', 'All')
-        # blueprintsBic = get_actor_blueprints(world, 'vehicle.harley-davidson.low_rider', 'All')
-        # blueprintsPed = get_actor_blueprints(world, 'walker.pedestrian.*', 'All')
-
-        # blueprintsVeh = [x for x in blueprintsVeh if int(x.get_attribute('number_of_wheels')) == 4]
-        # blueprintsVeh = [x for x in blueprintsVeh if x.has_attribute('role_name')]
-        # blueprintsBic = [x for x in blueprintsBic if x.has_attribute('role_name')]
-        # blueprintsVeh = sorted(blueprintsVeh, key=lambda bp: bp.id) # 对蓝图id进行排序，实验的时候控制变量作用，前后对比方便
-        # '''
-        # 蓝图处理
-        # 接下来是生成actor的函数
-        # world_tik
-        # 然后是销毁的actor的函数
-        # '''
-
-        # '''
-        # 这一部分的基本想法是：【每一帧】：
-        #                                 object要生成
-        #                                 object要销毁
-        #                                 object要移动
-        # '''
-        # all_veh_ids = processed_data.loc[processed_data.type == 'VEHICLE'].id.unique()
-        # all_bic_ids = processed_data.loc[processed_data.type == 'BICYCLE'].id.unique()
-        # all_ped_ids = processed_data.loc[processed_data.type == 'PEDESTRIAN'].id.unique()
-
-        # # PID
-        # args_lateral_dict = {'K_P': 1.95,'K_D': 0.2,'K_I': 0.07,'dt': 1.0 / 10.0}
-        # args_long_dict = {'K_P': 1,'K_D': 0.0,'K_I': 0.75,'dt': 1.0 / 10.0}
-        # target_speed = 60
-
-        # pid_dict = {}
-        # controller_dict = {}
-
-        # totol_frame = 100
-        # for this_frame in range(totol_frame):
-        #     # actor_spawn_time = {}   # 保存了每个ID在仿真开始多久之后 生成 的时间
-        #     # actor_destroy_time = {} # 保存了每个ID在仿真开始多久之后 消失 的时间
-        #     print(f'仿真时间戳：{this_frame}')
-        #     for this_vehicle in all_veh_ids:
-        #         if actor_spawn_time[this_vehicle] == this_frame:
-        #             # 计算出初始位置，之所以不用前面的是因为，之前的算出来的被修改成道路中心点了，这样初始场景就不真实了
-        #             x_t, y_t = cs_transform(processed_data.loc[processed_data.id == id].x.values[0], 
-        #                                     processed_data.loc[processed_data.id == id].y.values[0])
-        #             # processed_data = df_interpolate(raw_data) # 数据预处理，补齐缺失帧
-        #             location = carla.Location(x=x_t, y=y_t, z=0.01)  # 生成车辆x，y，z
-        #             theta_t = math.degrees(processed_data.loc[processed_data.id == id].theta.values[0])                
-        #             rotation = carla.Rotation(pitch=0.0, yaw=theta_t, roll=0.0)
-        #             transform = carla.Transform(location, rotation)
-
-        #             blueprint = random.choice(blueprintsVeh)
-
-        #             try:
-        #                 actor = world.spawn_actor(blueprint, transform)
-        #                 print(f"generate_veh_{id}")
-        #                 PID = VehiclePIDController(actor,args_lateral=args_lateral_dict,args_longitudinal=args_long_dict)
-        #                 pid_dict[id] = PID
-
-        #             except:
-        #                 #raise Exception
-        #                 pass
-        
-        # ego_car.destroy()
-
-
-
-
-    
-
-    
-
-    
-                
-                
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

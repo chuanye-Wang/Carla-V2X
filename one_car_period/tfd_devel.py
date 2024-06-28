@@ -418,6 +418,7 @@ def main():
         # --------------
         hero = args.hero
         #for n, transform in enumerate(spawn_points):
+        '''
         for n in range(len(veh_ids)):
             break
             if n >= args.number_of_vehicles:
@@ -456,7 +457,7 @@ def main():
             batch.append(SpawnActor(blueprint, transform)
                 .then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
 
-
+            '''
             #transform = world.get_map().get_spawn_points()[n]
 
             # sa = SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True, traffic_manager.get_port())).then(SetVehicleLightState(FutureActor, light_state))
