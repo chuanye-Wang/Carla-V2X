@@ -18,8 +18,8 @@ import math
 import random
 import time
 
-sys.path.append("/home/ubuntu/WCY/carla/PythonAPI/carla/")
-# sys.path.append("C:/Users/55350/Desktop/WindowsNoEditor/PythonAPI/carla")
+# sys.path.append("/home/ubuntu/WCY/carla/PythonAPI/carla/")
+sys.path.append("C:/Users/55350/Desktop/WindowsNoEditor/PythonAPI/carla")
 
 import carla
 from agents.tools.misc import draw_waypoints, distance_vehicle # type: ignore
@@ -51,6 +51,7 @@ class CustomWaypoint:
         self.transform = transform
         # self.location = location
         # self.rotation = rotation
+
     # def get_transform(self):
     #     return self.transform
 
@@ -69,10 +70,8 @@ def cs_transform(x1, y1):
     使用tmerc投影坐标系对象将还原后的UTM坐标转换为经纬度坐标。由于Carla使用左手坐标系，
     而我们常用的是右手坐标系，因此需要对y坐标取负。
 
-    @note 作者: 杨文鲜、钟佳儒、王川页
-    @note 注释：王川页
-    @note 联系电话: 13601193495
-    @note 邮箱: 553503540@qq.com
+    @note 作者: ywx、zjr、wcy
+    @note 注释：wcy
     """
     # 地理位置的偏移量，用于还原真实的UTM坐标
     ref_x, ref_y = -40251.76572214719, 326531.9706723457
@@ -300,32 +299,6 @@ def main():
         target_speed = 29
         
 
-        # for every_car in all_ids_that_we_have:
-
-            # actor_tag = str(every_car) # 将这个actor与id相挂钩，方便之后直接操控相应id的actor
-            # cybertruck_bp.set_attribute('role_name',actor_tag)
-            # actor = world.spawn_actor(cybertruck_bp, wps_dic[every_car][0].transform)
-            # PID=VehiclePIDController(every_car,args_lateral=args_lateral_dict,args_longitudinal=args_long_dict)
-            # next = wps_dic[every_car][1] # 这一行是否有用
-            # chapter_actor_list.append(actor)
-
-        # print(f'现在actor的数量是：{len(chapter_actor_list)}')
-
-        
-
-            # for this_actor in chapter_actor_list:
-            #     if i == 99:
-            #         break
-            #     ego_transform = this_actor.get_transform()
-            #     # print(f'ego车辆的transform：{ego_transform}')
-            #     ego_dist = distance_vehicle(next, ego_transform)
-            #     control = PID.run_step(target_speed, next)
-            #     this_actor.apply_control(control)
-            #     if ego_dist < 1.5: 
-            #         i = i + 1
-            #         next = wps_dic[this_actor.attributes['role_name']][i]
-            #         control = PID.run_step(target_speed, next)
-
         '''
         接下来需要把所有actor的waypoint的第一个点，也就是生成点的高度，定制化成该位置map的高度，这样会好很多
         '''
@@ -391,7 +364,10 @@ def main():
                             this_actor_this_moment.apply_control(control)
                         ########################################################################################
 
+
+
                         ########################################################################################
+                        # # 第二种巡线方法
                         # this_actor_this_moment_id = int(this_actor_this_moment.attributes['role_name'])
                         # PID = pid_dict[this_actor_this_moment_id]
 
@@ -406,11 +382,6 @@ def main():
                         #     next_waypoint = wps_dic[this_actor_this_moment_id][this_frame - 0]
                         #     control = PID.run_step(target_speed, next_waypoint)
                         ########################################################################################
-
-
-                
-
-
 
                 '''
                 这个车要消失
