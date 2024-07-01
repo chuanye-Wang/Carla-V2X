@@ -11,7 +11,7 @@ import random
 import sys,os
 import numpy
 
-command = 2
+command = 3
 
 if command == 1:
     '''
@@ -84,5 +84,57 @@ if command == 2:
          print(f'生成文件出错：{e}')
 
 
+if command ==3:
+    '''
+    负责按照 tap 来筛选数据的ID，目前的想法是选三个自行车出来，再选三个行人出来
+    '''
+    try:
+        nums_I_want_to_select = 3
+        path2dataset_file = "10039.csv"
+        type_i_want = 'PEDESTRIAN' # type:ignore
+        output_file = '10039_3_PEDESTRIAN.csv'
 
 
+        
+        # print(f'dataset path: {path2dataset_file}')
+        raw_data = pd.read_csv(path2dataset_file) # 只不过是换成pd的数据结构读取了而已
+        colums_we_want = ['timestamp','id','type','x','y', 'theta'] # 只选择这些节省时间和空间
+        raw_data = raw_data[colums_we_want] # 这才是我们确切需要的，不带任何冗余的数据
+
+        # this_type = str(type_i_want)
+        found = raw_data[raw_data['type'] == type_i_want] # type: ignore
+        # print(f'找到符合的一行：\n{found}\n')
+        all_ids_that_we_have = found.id.unique()
+        # print(f'所有id为：{all_ids_that_we_have}')
+
+        select_modified_num_of_id = all_ids_that_we_have[0:nums_I_want_to_select]
+        # print(f'我想要的前{nums_I_want_to_select}个id为：{select_modified_num_of_id}')
+       
+
+        new_data_frame = pd.DataFrame(columns=colums_we_want)
+
+        for this_id in select_modified_num_of_id:
+            tmp_df = raw_data[raw_data['id'] == this_id]
+            new_data_frame = pd.concat([new_data_frame, tmp_df], ignore_index=True)
+
+        # print(f'看看筛选出来的df：{new_data_frame}')
+
+
+        try:
+            new_data_frame.to_csv(output_file, index=False)
+            print(f'生成文件{output_file}成功')
+        
+        except Exception as ex:
+             print(f'保存数据出现错误：{e}')
+             
+            
+
+    except Exception as e:
+         print(f'筛选数据出现错误：{e}')
+
+
+
+if command == 4:
+    '''
+    将几个csv文件串联起来
+    '''
