@@ -1,7 +1,7 @@
 '''
 待优化：
 
-    1.生成车的location，可以先获取地图的高度z，然后再在这个基础上加0.1，这样所有车都能比较稳妥的生成, 这个不知是否其效果
+    1.生成车的location，可以先获取地图的高度z，然后再在这个基础上加0.1，这样所有车都能比较稳妥的生成, 这个不知是否其效果 （已完成！！）
 
     2. 数据处理的多线程优化，我认为，之后这部分可以独立出来成为一个数据预处理脚本，将所有原始数据集的csv都经过转换之后保存在新的csv当中。
 
@@ -32,11 +32,19 @@ def get_z(world,x,y):
 
     @note 作者：wcy
     '''
-    map = world.get_map()
-    location = carla.Location(x=x,y=y)
-    z_map = map.get_waypoint(location).transform.location.z
+    up_location = carla.Location(x=x, y=y, z=1000) 
+    down_location = carla.Location(x=x, y=y, z=-1000)  
+    ray_cast = world.cast_ray(up_location, down_location)
 
-    return z_map
+    try:
+        if ray_cast:
+            hit_location = ray_cast[0].location
+            map_z = hit_location.z
+        
+    except Exception as e:
+        raise RuntimeError(f'射线未检测到，不过没关系 错误信息：{e}')
+
+    return map_z + 0.7
 
 
 class CustomWaypoint:
@@ -162,7 +170,7 @@ def df_interpolate(df):
 def main():
     try:
         # path2dataset_file = "../data/10039_3_BICYCLE.csv"
-        path2dataset_file = "../data/10039_3_car_bike.csv"
+        # path2dataset_file = "../data/10039_3_car_bike.csv"
         # path2dataset_file = "../data/10039_3_car.csv"
         # path2dataset_file = "../data/10039_pro.csv"
 
@@ -210,45 +218,7 @@ def main():
         # print(f'所有bike的id：{all_bic_ids}')
 
 
-
-
-        print(f'开始进行坐标转换：')
-        wps_dic = {} # 路径点字典，键值为：id、数值为路径点数列。
-        # 才5个车就已经看到了需要多线程改进的影子了--------------------------待修改2
-        for this_specific_id in all_ids_that_we_have:
-            print(f'目前在处理的id是：{this_specific_id}')
-            # 将插值处理过后的原始数据集中的所有 “此循环时的id” 的数据打包出来成为一个单独的（暂时的）数据结构
-            all_data_of_this_id = processed_data.loc[processed_data.id == this_specific_id]
-            # print(all_data_of_this_id)
-            wps = [] # 路径点数列
-
-            # if(actor_spawn_time[this_specific_id] == this_frame):
-            # 把这个id的数据集转换之后存在 wps 数列当中
-            for this_frame in range(len(all_data_of_this_id)): 
-                    
-                x_, y_ = cs_transform(all_data_of_this_id.x.values[this_frame], all_data_of_this_id.y.values[this_frame])
-
-                location = carla.Location(x=x_, y=y_, z=0.5)  # z的值，可以优化成，获得生成点地图的高度，然后将z的值就改为地图的高度加0.1 #  还需优化的地方------------待修改1
-                # rotation = carla.Rotation(pitch=0.0, yaw=all_data_of_this_id.theta.values[this_frame], roll=0.0)
-                rotation = carla.Rotation(pitch=0.0, yaw=-all_data_of_this_id.theta.values[this_frame]+45, roll=0.0) # 不对
-                transform = carla.Transform(location, rotation)
-                waypoint_wrapped = CustomWaypoint(transform)
-                # print(f'打印transform看看是什么类型的：{transform}')
-
-                # wps.append(world.get_map().get_waypoint(transform.location))
-                wps.append(waypoint_wrapped)
-                # wps.append(waypoint_wrapped)
-                    
-            wps_dic[this_specific_id] = wps   # 这个当中存的键值是 id， 其value是数列，数列的每个元素是一个 CustomWaypoint实例
-            
-        # print(f'看看路径点字典中是什么格式的：{wps_dic}')
-
-        '''
-        这里也许需要把所有的经过转换过后的数据都存在一个新的csv当中，这样就不用每次relog都重新处理一边数据，这样非常快了
-                                待修改3！
-        '''
-        
-
+        # 由于waypoint处理需要获得world信息，因此这部分挪到前面来做了
         try:
             print("初始化Client端口")
             client = carla.Client('127.0.0.1',2000)
@@ -289,6 +259,51 @@ def main():
         except Exception as e:
             raise RuntimeError('世界信息异常，要么是client.get_world()失败，要么是后续仿真器世界配置出错')
 
+
+
+
+
+
+        print(f'开始进行坐标转换：')
+        wps_dic = {} # 路径点字典，键值为：id、数值为路径点数列。
+        # 才5个车就已经看到了需要多线程改进的影子了--------------------------待修改2
+        for this_specific_id in all_ids_that_we_have:
+            print(f'目前在处理的id是：{this_specific_id}')
+            # 将插值处理过后的原始数据集中的所有 “此循环时的id” 的数据打包出来成为一个单独的（暂时的）数据结构
+            all_data_of_this_id = processed_data.loc[processed_data.id == this_specific_id]
+            # print(all_data_of_this_id)
+            wps = [] # 路径点数列
+
+            # if(actor_spawn_time[this_specific_id] == this_frame):
+            # 把这个id的数据集转换之后存在 wps 数列当中
+            for this_frame in range(len(all_data_of_this_id)): 
+                    
+                x_, y_ = cs_transform(all_data_of_this_id.x.values[this_frame], all_data_of_this_id.y.values[this_frame])
+                # z_ = get_z(world,x_,y_)
+
+                location = carla.Location(x=x_, y=y_, z=0.5)  # z的值，可以优化成，获得生成点地图的高度，然后将z的值就改为地图的高度加0.1 #  还需优化的地方------------待修改1
+                # rotation = carla.Rotation(pitch=0.0, yaw=all_data_of_this_id.theta.values[this_frame], roll=0.0)
+                rotation = carla.Rotation(pitch=0.0, yaw=-all_data_of_this_id.theta.values[this_frame]+45, roll=0.0) # 不对
+                transform = carla.Transform(location, rotation)
+                waypoint_wrapped = CustomWaypoint(transform)
+                # print(f'打印transform看看是什么类型的：{transform}')
+
+                # wps.append(world.get_map().get_waypoint(transform.location))
+                wps.append(waypoint_wrapped)
+                # wps.append(waypoint_wrapped)
+                    
+            wps_dic[this_specific_id] = wps   # 这个当中存的键值是 id， 其value是数列，数列的每个元素是一个 CustomWaypoint实例
+            
+        # print(f'看看路径点字典中是什么格式的：{wps_dic}')
+
+        '''
+        这里也许需要把所有的经过转换过后的数据都存在一个新的csv当中，这样就不用每次relog都重新处理一边数据，这样非常快了
+                                待修改3！
+        '''
+        
+
+        
+
         try:
             for each_id in all_ids_that_we_have:
                 draw_waypoints(world, wps_dic[each_id])
@@ -315,7 +330,7 @@ def main():
 
         pid_dict = {}
 
-        car_target_speed = 26
+        car_target_speed = 25
         bic_target_speed = 10
 
 
@@ -327,7 +342,7 @@ def main():
             x_ = wps_dic[this_actor][0].transform.location.x
             y_ = wps_dic[this_actor][0].transform.location.y
             # map_z = get_z(world,x_,y_)
-            wps_dic[this_actor][0].transform.location.z = get_z(world,x_,y_) + 1
+            wps_dic[this_actor][0].transform.location.z = get_z(world,x_,y_)
 
 
         for this_actor_id in all_ids_that_we_have:
