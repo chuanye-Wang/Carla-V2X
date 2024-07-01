@@ -11,7 +11,7 @@ import random
 import sys,os
 import numpy
 
-command = 3
+command = 4
 
 if command == 1:
     '''
@@ -138,3 +138,15 @@ if command == 4:
     '''
     将几个csv文件串联起来
     '''
+
+    # files = ['10039_3_car.csv', '10039_3_BICYCLE.csv']
+    f1 = pd.read_csv('10039_3_car.csv')
+    f2 = pd.read_csv('10039_3_BICYCLE.csv')
+    colums_we_want = ['timestamp','id','type','x','y', 'theta'] # 只选择这些节省时间和空间
+    new_data_frame = pd.DataFrame(columns=colums_we_want)
+
+    new_data_frame = pd.concat([f1, f2], ignore_index=True)
+
+    output_file = '10039_3_car_bike.csv'
+    new_data_frame.to_csv(output_file, index=False)
+    print(f'生成文件{output_file}成功')

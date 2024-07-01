@@ -18,7 +18,7 @@ import math
 import random
 import time
 
-# sys.path.append("/home/ubuntu/WCY/carla/PythonAPI/carla/")
+sys.path.append("/home/ubuntu/WCY/carla/PythonAPI/carla/")
 sys.path.append("C:/Users/55350/Desktop/WindowsNoEditor/PythonAPI/carla")
 
 import carla
@@ -161,7 +161,10 @@ def df_interpolate(df):
 
 def main():
     try:
-        path2dataset_file = "../data/10039_3_car.csv"
+        # path2dataset_file = "../data/10039_3_BICYCLE.csv"
+        # path2dataset_file = "../data/10039_3_car_bike.csv"
+        # path2dataset_file = "../data/10039_3_car.csv"
+
         # print(f'dataset path: {path2dataset_file}')
         raw_data = pd.read_csv(path2dataset_file) # 只不过是换成pd的数据结构读取了而已
         # print(raw_data)
@@ -190,8 +193,23 @@ def main():
             
         print('数据预处理完毕！\n')  # 这一部分包括了按照时间先后排序
         # print(f'看看生成时间字典：{actor_spawn_time}')   
+        check_time = {}
+        for i in actor_destroy_time:
+            check_time[i] = int(actor_destroy_time[i]*10)
+
+        print(f'看看销毁时间字典：{check_time}')
         # for each in all_ids_that_we_have:
         #     print(f'演员 {each} 的生成时间点：{actor_spawn_time[each]}')
+
+        all_veh_ids = processed_data.loc[processed_data.type == 'VEHICLE'].id.unique()
+        all_bic_ids = processed_data.loc[processed_data.type == 'BICYCLE'].id.unique()
+        all_ped_ids = processed_data.loc[processed_data.type == 'PEDESTRIAN'].id.unique()
+
+        # print(f'所有car的id：{all_veh_ids}')
+        # print(f'所有bike的id：{all_bic_ids}')
+
+
+
 
         print(f'开始进行坐标转换：')
         wps_dic = {} # 路径点字典，键值为：id、数值为路径点数列。
@@ -284,21 +302,23 @@ def main():
         print(f'开始actor一系列初始化')
         blueprint_library = world.get_blueprint_library()
         cybertruck_bp = blueprint_library.find('vehicle.tesla.cybertruck')
+        bike_bp = blueprint_library.find('vehicle.gazelle.omafiets')
         
-        chapter_actor_list = [] # 这一段数据集，我管它叫章节，仅仅是因为这么叫好玩，chapter_actor_list包含这一章节所有的演员
+        chapter_car_actor_list = [] # 这一段数据集，我管它叫章节，仅仅是因为这么叫好玩，chapter_actor_list包含这一章节所有的演员
+        chapter_bic_actor_list = []
+        chapter_ped_actor_list = []
 
         args_lateral_dict = {'K_P': 1.95,'K_D': 0.2,'K_I': 0.07,'dt': 1.0 / 10.0}
         args_long_dict = {'K_P': 1,'K_D': 0.0,'K_I': 0.75,'dt': 1.0 / 10.0}
-        
-        # args_lateral_dict = {'K_P': 1.95,'K_D': 0.2,'K_I': 0.07,'dt': 1.0 / 10.0}
-        # args_long_dict = {'K_P': 3,'K_D': 0.0,'K_I': 0.75,'dt': 1.0 / 10.0}
 
 
         pid_dict = {}
 
-        target_speed = 29
-        
+        car_target_speed = 29
+        bic_target_speed = 10
 
+
+        
         '''
         接下来需要把所有actor的waypoint的第一个点，也就是生成点的高度，定制化成该位置map的高度，这样会好很多
         '''
@@ -306,97 +326,161 @@ def main():
             x_ = wps_dic[this_actor][0].transform.location.x
             y_ = wps_dic[this_actor][0].transform.location.y
             # map_z = get_z(world,x_,y_)
-            wps_dic[this_actor][0].transform.location.z = get_z(world,x_,y_) + 0.5
+            wps_dic[this_actor][0].transform.location.z = get_z(world,x_,y_) + 1.5
 
 
         for this_actor_id in all_ids_that_we_have:
-            next_waypoint = wps_dic[this_actor_id][1]    # 如果不这么写，就会无法巡线，也会出现index超出错误，至于为什么，参考one_car_test.py的实现
+            next_waypoint = wps_dic[this_actor_id][1]    # 先定一个目标waypoint，然后在循环中往下遍历
 
-        total_frame = 100
-        for this_frame in range(total_frame):
-            start_time = time.time()
-            print(f'目前的场景帧：{this_frame}')
+        '''
+        all_veh_ids = processed_data.loc[processed_data.type == 'VEHICLE'].id.unique()
+        all_bic_ids = processed_data.loc[processed_data.type == 'BICYCLE'].id.unique()
+        all_ped_ids = processed_data.loc[processed_data.type == 'PEDESTRIAN'].id.unique()
+        '''
 
-            '''
-            所有车
-            '''
-            for this_car in all_ids_that_we_have:
-                '''
-                这个车要生成
-                '''
-                if this_car in actor_spawn_time and actor_spawn_time[this_car] == this_frame:
-                    cybertruck_bp.set_attribute('role_name',str(this_car)) # 将这个actor与id相挂钩，方便之后直接操控相应id的actor
-                    this_car_actor = world.spawn_actor(cybertruck_bp, wps_dic[this_car][0].transform)
-                    # name = this_car_actor.attributes['role_name']
-                    # print(f'生成的这个车的role_name:{name}')           # 这里测试了 role_name 成功设置上了
-                    PID=VehiclePIDController(this_car_actor,args_lateral=args_lateral_dict,args_longitudinal=args_long_dict)
-                    pid_dict[this_car] = PID
-                    # # next = wps_dic[every_car][1] # 这一行是否有用
-                    chapter_actor_list.append(this_car_actor)
+        # total_frame = 100
+        # for this_frame in range(total_frame):
+        #     start_time = time.time()
+        #     print(f'目前的场景帧：{this_frame}')
+
+        #     '''
+        #     所有车
+        #     '''
+        #     for this_car in all_veh_ids:
+        #         '''
+        #         这个车要生成
+        #         '''
+        #         if this_car in actor_spawn_time and int(actor_spawn_time[this_car]*10) == this_frame:
+        #             cybertruck_bp.set_attribute('role_name',str(this_car)) # 将这个actor与id相挂钩，方便之后直接操控相应id的actor
+        #             this_car_actor = world.spawn_actor(cybertruck_bp, wps_dic[this_car][0].transform)
+        #             chapter_car_actor_list.append(this_car_actor)
+        #             name = this_car_actor.attributes['role_name']
+        #             print(f'生成 car {name}')           # 这里测试了 role_name 成功设置上了
+        #             PID=VehiclePIDController(this_car_actor,args_lateral=args_lateral_dict,args_longitudinal=args_long_dict)
+        #             pid_dict[this_car] = PID
+        #             # # next = wps_dic[every_car][1] # 这一行是否有用
+                    
+                
+
+                # '''
+                # 这个车要消失
+                # '''
+                # # all_actor_this_moment = chapter_actor_list 
+                # # print(f'目前有的actor：{all_actor_this_moment}')
+                # for this_car_actor in chapter_car_actor_list:
+                #     if this_car_actor.attributes['role_name'] == this_car:
+                #         # name = this_car_this_moment.attributes['role_name']
+                #         # print(f'现在有的actor：{name}')
+                #         if int(actor_destroy_time[this_car] * 10) == this_frame:
+                #             this_car_actor.destroy()
+                #             print(f'销毁 car {this_car}')
+                        
+
+
+                # '''
+                # 这个车要移动
+                # '''
+                # # all_actor_this_moment = world.get_actors()
+                # for this_car_actor in chapter_car_actor_list:
+                #     if this_car_actor.attributes['role_name'] == this_car:
+                #         ########################################################################################
+                #         this_car_actor_id = this_car_actor.attributes['role_name']
+                #         # print_role_name = this_actor_this_moment.attributes['role_name']
+                #         # print(f'车辆attribute为： {print_role_name}')
+                #         PID = pid_dict[this_car_actor_id]
+
+                #         next_waypoint = wps_dic[this_car_actor_id][this_frame - 0]
+                #         this_car_transform = this_car_actor_id.get_transform()
+                #         dist_to_next_waypoint = distance_vehicle(next_waypoint, this_car_transform)
+
+                #         control = PID.run_step(car_target_speed, next_waypoint)
+                        
+                #         if dist_to_next_waypoint > 2: 
+                #             this_car_actor.apply_control(control)
+                #         ########################################################################################
+                
+
+
+            # '''
+            # 所有Bike
+            # '''
+            # for this_bike in all_bic_ids:
+            #     '''
+            #     这个Bike要生成
+            #     '''
+            #     if this_bike in actor_spawn_time and actor_spawn_time[this_bike] == this_frame:
+            #         bike_bp.set_attribute('role_name',str(this_bike)) # 将这个actor与id相挂钩，方便之后直接操控相应id的actor
+            #         this_bike_actor = world.spawn_actor(bike_bp, wps_dic[this_bike][0].transform)
+            #         name = this_bike_actor.attributes['role_name']
+            #         print(f'生成 bike:{name}')           # 这里测试了 role_name 成功设置上了
+            #         PID=VehiclePIDController(this_bike_actor,args_lateral=args_lateral_dict,args_longitudinal=args_long_dict)
+            #         pid_dict[this_bike] = PID
+            #         # # next = wps_dic[every_car][1] # 这一行是否有用
+            #         chapter_actor_list.append(this_bike_actor)
                     
 
-                '''
-                这个车要移动
-                '''
-               
-
-
-                all_actor_this_moment = world.get_actors()
-                for this_actor_this_moment in all_actor_this_moment:
+            #     '''
+            #     这个Bike要移动
+            #     '''
+            #     # all_actor_this_moment = world.get_actors() 
+            #     for this_actor_this_moment in chapter_actor_list:
                     
-                    # if this_actor_this_moment.attributes['role_name'] == str(this_car):
-                    if 'role_name' in this_actor_this_moment.attributes and this_actor_this_moment.attributes['role_name'] == str(this_car): 
-                        '''
-                        role_name' in this_actor_this_moment.attributes 
-                        终于明白为什么要加这一行了，因为
-                        '''
-                        ########################################################################################
-                        this_actor_this_moment_id = int(this_actor_this_moment.attributes['role_name'])
-                        PID = pid_dict[this_actor_this_moment_id]
+            #         # if this_actor_this_moment.attributes['role_name'] == str(this_car):
+            #         if 'role_name' in this_actor_this_moment.attributes and int(float(this_actor_this_moment.attributes['role_name'])) == int(float(this_bike)): 
+            #                 '''
+            #                 role_name' in this_actor_this_moment.attributes 
+            #                 终于明白为什么要加这一行了，因为
+            #                 '''
+            #                 ########################################################################################
+            #                 this_actor_this_moment_id = int(float(this_actor_this_moment.attributes['role_name']))
+            #                 PID = pid_dict[this_actor_this_moment_id]
 
-                        next_waypoint = wps_dic[this_actor_this_moment_id][this_frame - 0]
-                        this_car_transform = this_actor_this_moment.get_transform()
-                        dist_to_next_waypoint = distance_vehicle(next_waypoint, this_car_transform)
+            #                 next_waypoint = wps_dic[this_actor_this_moment_id][this_frame - 0]
+            #                 this_bike_transform = this_actor_this_moment.get_transform()
+            #                 dist_to_next_waypoint = distance_vehicle(next_waypoint, this_bike_transform)
 
-                        control = PID.run_step(target_speed, next_waypoint)
-                        
-                        if dist_to_next_waypoint > 2: 
-                            this_actor_this_moment.apply_control(control)
-                        ########################################################################################
+            #                 control = PID.run_step(bic_target_speed, next_waypoint)
+                            
+            #                 if dist_to_next_waypoint > 0.5: 
+            #                     this_actor_this_moment.apply_control(control)
+            #                 ########################################################################################
+
+            #     '''
+            #     这个Bike要消失
+            #     '''
+            #     # all_actor_this_moment = world.get_actors() # 可以删除
+            #     for this_actor_this_moment in chapter_actor_list:
+            #         if 'role_name' in this_actor_this_moment.attributes and int(float(this_actor_this_moment.attributes['role_name'])) == int(float(this_bike)): 
+
+            #             if int(actor_destroy_time[this_bike] * 10)== this_frame:
+            #                 this_actor_this_moment.destroy()
+            #                 print(f'销毁 bike {this_bike}')
 
 
 
-                        ########################################################################################
-                        # # 第二种巡线方法
-                        # this_actor_this_moment_id = int(this_actor_this_moment.attributes['role_name'])
-                        # PID = pid_dict[this_actor_this_moment_id]
 
-                        
-                        # this_car_transform = this_actor_this_moment.get_transform()
-                        # dist_to_next_waypoint = distance_vehicle(next_waypoint, this_car_transform)
 
-                        # control = PID.run_step(target_speed, next_waypoint)
-                        # this_actor_this_moment.apply_control(control)
 
-                        # if dist_to_next_waypoint < 1.5: 
-                        #     next_waypoint = wps_dic[this_actor_this_moment_id][this_frame - 0]
-                        #     control = PID.run_step(target_speed, next_waypoint)
-                        ########################################################################################
 
-                '''
-                这个车要消失
-                '''
-                # all_actor_this_moment = world.get_actors() # 可以删除
-                # for this_actor_this_moment in all_actor_this_moment:
-                #     if actor_destroy_time[this_car] == this_frame:
-                #         this_actor_this_moment.destroy()
 
-            world.tick()
 
-            # # 计算帧的执行时间
-            elapsed_time = time.time() - start_time
-            # 等待剩余时间以模拟真实时间推进
-            time.sleep(max(0, settings.fixed_delta_seconds - elapsed_time))
+
+
+
+
+
+
+
+
+
+
+
+            # world.tick()
+
+            # # # 计算帧的执行时间
+            # elapsed_time = time.time() - start_time
+            # # 等待剩余时间以模拟真实时间推进
+            # time.sleep(max(0, settings.fixed_delta_seconds - elapsed_time))
                 
 
 
@@ -419,11 +503,14 @@ def main():
 
 
     finally:
+        # final_actors = world.get_actors()
+        # for every_actor in final_actors:
+        #     every_actor.destroy()
+
         settings.synchronous_mode = False
         world.apply_settings(settings)
         print('同步模式关闭')
-        for every_actor in chapter_actor_list:
-            every_actor.destroy()
+        
 
 
 
